@@ -23,8 +23,10 @@ function composeTwoRefs<T>(ref1: OptionalRef<T>, ref2: OptionalRef<T>): Optional
     composedRefCache.set(ref1, ref1Cache)
 
     const composedRef = ref1Cache.get(ref2) || ((instance: T): () => void => {
-      const ref1Cleanup = updateRef(ref1, instance) || (() => {updateRef(ref1, null)})
-      const ref2Cleanup = updateRef(ref2, instance) || (() => {updateRef(ref2, null)})
+      const ref1Return = updateRef(ref1, instance)
+      const ref2Return = updateRef(ref2, instance)
+      const ref1Cleanup = typeof ref1Return === 'function' ? ref1Return : () => {updateRef(ref1, null)}
+      const ref2Cleanup = typeof ref2Return === 'function' ? ref2Return : () => {updateRef(ref2, null)}
       return () => {
         ref1Cleanup()
         ref2Cleanup()
