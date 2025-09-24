@@ -22,9 +22,13 @@ function composeTwoRefs<T>(ref1: OptionalRef<T>, ref2: OptionalRef<T>): Optional
     const ref1Cache = composedRefCache.get(ref1) || new WeakMap<NonNullRef<unknown>, NonNullRef<unknown>>()
     composedRefCache.set(ref1, ref1Cache)
 
-    const composedRef = ref1Cache.get(ref2) || ((instance: T): void => {
-      updateRef(ref1, instance)
-      updateRef(ref2, instance)
+    const composedRef = ref1Cache.get(ref2) || ((instance: T): () => void => {
+      const ref1Cleanup = updateRef(ref1, instance) || (() => {updateRef(ref1, null)})
+      const ref2Cleanup = updateRef(ref2, instance) || (() => {updateRef(ref2, null)})
+      return () => {
+        ref1Cleanup()
+        ref2Cleanup()
+      }
     })
     ref1Cache.set(ref2, composedRef)
 
@@ -38,9 +42,9 @@ function composeTwoRefs<T>(ref1: OptionalRef<T>, ref2: OptionalRef<T>): Optional
   }
 }
 
-function updateRef<T>(ref: NonNullRef<T>, instance: null | T): void {
+function updateRef<T>(ref: NonNullRef<T>, instance: null | T): void | (() => void) {
   if (typeof ref === 'function') {
-    ref(instance)
+    return ref(instance)
   } else {
     (ref as MutableRefObject<T | null>).current = instance
   }
